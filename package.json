@@ -5,7 +5,8 @@
   "main": "main.js",
   "private": true,
   "dependencies": {
-    "electron-updater": "6.8.11"
+    "electron-updater": "6.8.11",
+    "gifenc": "1.0.3"
   },
   "scripts": {
     "start": "electron .",
@@ -31,7 +32,9 @@
       "package.json"
     ],
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     },
     "nsis": {
       "oneClick": false,
@@ -39,11 +42,13 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
-    "publish": [{
-      "provider": "github",
-      "owner": "izik1333",
-      "repo": "FlashDesk-Player",
-      "releaseType": "release"
-    }]
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "izik1333",
+        "repo": "FlashDesk-Player",
+        "releaseType": "release"
+      }
+    ]
   }
 }

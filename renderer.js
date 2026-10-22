@@ -18,6 +18,7 @@ let libraryCoverUrls = [];
 let favoritesDbPromise = null;
 let recentGame = null;
 let recentGamePromise = null;
+let gifRecording = false;
 let toastTimer = null;
 let fullscreenControlsTimer = null;
 let viewportSyncFrame = 0;
@@ -29,7 +30,7 @@ const elements = {
   favoritesButton: $('favorites-open-btn'), favoritesCount: $('favorites-count'), favoritesPanel: $('favorites-popover'),
   favoritesList: $('favorites-list'), favoriteCurrentButton: $('favorite-current-btn'),
   libraryCurrentButton: $('library-current-btn'), coverCurrentButton: $('cover-current-btn'),
-  screenshotCurrentButton: $('screenshot-current-btn'), coverPicker: $('cover-picker'),
+  screenshotCurrentButton: $('screenshot-current-btn'), gifCoverButton: $('gif-cover-btn'), coverPicker: $('cover-picker'),
   dropZone: $('drop-zone'), dropHint: $('drop-hint'), emptyState: $('empty-state'), playerMount: $('player-mount'), stageOverlay: $('stage-overlay'),
   fileName: $('file-name'), fileDetails: $('file-details'), movieState: $('movie-state'),
   engineStatus: $('engine-status'), engineDot: $('engine-dot'), playButton: $('play-btn'),
@@ -332,6 +333,7 @@ function syncLibraryButtons() {
   elements.libraryCurrentButton.title = record ? 'Saved in library' : 'Add to library';
   elements.coverCurrentButton.disabled = !hasGame;
   elements.screenshotCurrentButton.disabled = !hasGame;
+  elements.gifCoverButton.disabled = !hasGame || gifRecording;
   elements.favoriteCurrentButton.disabled = !hasGame;
   elements.favoriteCurrentButton.classList.toggle('is-favorite', isFavorite);
   elements.favoriteCurrentButton.setAttribute('aria-label', isFavorite ? 'Remove current game from favorites' : 'Add current game to favorites');
@@ -468,6 +470,8 @@ async function toggleCurrentFavorite() {
 }
 
 async function createCoverThumbnail(file) {
+  // Keep animated GIF data intact; the square cover element crops it visually.
+  if (file.type === 'image/gif') return file.slice(0, file.size, 'image/gif');
   let bitmap;
   bitmap = await createImageBitmap(file);
   const edge = 512;
@@ -488,7 +492,7 @@ async function createCoverThumbnail(file) {
   });
 }
 
-async function storeCurrentCover(cover) {
+async function storeCurrentCover(cover, message = 'Game cover saved.') {
   let record = getCurrentLibraryRecord();
   if (!record) record = await addCurrentGameToLibrary(false);
   if (!record) return;
@@ -497,7 +501,7 @@ async function storeCurrentCover(cover) {
   libraryRecords = libraryRecords.map((item) => item.id === record.id ? record : item);
   syncLibraryButtons();
   renderLibrary();
-  showToast('Game cover saved.');
+  showToast(message);
 }
 
 async function chooseCoverImage(file) {
@@ -532,6 +536,66 @@ async function captureGameCover() {
     await storeCurrentCover(cover);
   } catch (error) {
     showToast(error?.message || 'Could not capture the game screen.');
+  }
+}
+
+async function captureGameGifCover() {
+  if (!currentPlayer || !window.appWindow?.captureGameFrame || !window.appWindow?.encodeGameGif) {
+    showToast('Game GIF capture is unavailable right now.');
+    return;
+  }
+  const edge = 160;
+  const frameCount = 24;
+  const durationMs = 4000;
+  const frameInterval = durationMs / frameCount;
+  const frames = [];
+  const canvas = document.createElement('canvas');
+  canvas.width = edge;
+  canvas.height = edge;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) {
+    showToast('Could not prepare a GIF cover.');
+    return;
+  }
+
+  gifRecording = true;
+  elements.gifCoverButton.disabled = true;
+  elements.gifCoverButton.textContent = 'REC';
+  elements.gifCoverButton.setAttribute('aria-label', 'Recording a four-second game GIF');
+  elements.gifCoverButton.title = 'Recording game GIF…';
+  showToast('Recording a 4-second animated cover… keep the game on screen.');
+  const startedAt = performance.now();
+  try {
+    for (let index = 0; index < frameCount; index += 1) {
+      const waitMs = startedAt + index * frameInterval - performance.now();
+      if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
+      const gameCanvas = currentPlayer.shadowRoot?.querySelector('#container canvas');
+      const bounds = (gameCanvas || currentPlayer).getBoundingClientRect();
+      if (bounds.width < 1 || bounds.height < 1) throw new Error('The game screen is not visible yet.');
+      const pngBytes = await window.appWindow.captureGameFrame({
+        x: bounds.left,
+        y: bounds.top,
+        width: bounds.width,
+        height: bounds.height
+      });
+      const bitmap = await createImageBitmap(new Blob([pngBytes], { type: 'image/png' }));
+      const scale = Math.max(edge / bitmap.width, edge / bitmap.height);
+      const cropWidth = edge / scale;
+      const cropHeight = edge / scale;
+      context.drawImage(bitmap, (bitmap.width - cropWidth) / 2, (bitmap.height - cropHeight) / 2, cropWidth, cropHeight, 0, 0, edge, edge);
+      frames.push(context.getImageData(0, 0, edge, edge).data);
+      bitmap.close();
+    }
+    const gifBytes = await window.appWindow.encodeGameGif(frames, edge, edge, 170);
+    await storeCurrentCover(new Blob([gifBytes], { type: 'image/gif' }), 'Animated game GIF cover saved.');
+  } catch (error) {
+    showToast(error?.message || 'Could not record an animated game cover.');
+  } finally {
+    gifRecording = false;
+    elements.gifCoverButton.textContent = 'GIF';
+    elements.gifCoverButton.setAttribute('aria-label', 'Record a four-second game GIF as its cover');
+    elements.gifCoverButton.title = 'Record 4-second game GIF as cover';
+    syncLibraryButtons();
   }
 }
 
@@ -826,6 +890,7 @@ function bindEvents() {
   elements.libraryCurrentButton.addEventListener('click', () => addCurrentGameToLibrary());
   elements.coverCurrentButton.addEventListener('click', () => elements.coverPicker.click());
   elements.screenshotCurrentButton.addEventListener('click', captureGameCover);
+  elements.gifCoverButton.addEventListener('click', captureGameGifCover);
   elements.coverPicker.addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (file) chooseCoverImage(file);

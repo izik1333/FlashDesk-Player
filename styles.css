@@ -81,11 +81,14 @@ button { color: inherit; }
 .library-current-btn { color: #747f91; }
 .library-current-btn:not(:disabled):hover,
 .cover-current-btn:not(:disabled):hover,
-.screenshot-current-btn:not(:disabled):hover { color: #bdb0ff; }
+.screenshot-current-btn:not(:disabled):hover,
+.gif-cover-btn:not(:disabled):hover { color: #bdb0ff; }
 .library-current-btn.is-saved { color: #70d3a3; }
 .cover-current-btn { color: #8994a5; }
 .screenshot-current-btn { color: #8994a5; }
+.gif-cover-btn { flex: 0 0 28px; color: #8994a5; font-size: 7px; font-weight: 800; letter-spacing: .2px; }
 .screenshot-current-btn:disabled { opacity: .35; cursor: default; }
+.gif-cover-btn:disabled { opacity: .35; cursor: default; }
 .favorite-current-btn:disabled { opacity: .35; cursor: default; }
 .favorite-current-btn:not(:disabled):hover { color: #d5cbff; }
 .favorite-current-btn.is-favorite { color: #f2c46e; }

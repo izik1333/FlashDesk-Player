@@ -25,7 +25,7 @@ FlashDesk checks the public GitHub Releases feed at `izik1333/FlashDesk-Player`.
 
 - **Open SWF** or **Ctrl+O**: choose a movie.
 - The **Play** button reopens the most recently played SWF. FlashDesk keeps that one recent game locally on this device; if there is no recent game, Play opens the file picker.
-- Tap the **+** button next to a loaded game's name to save it in the Library. Use the star to favorite it, the picture button to choose an image, or the camera button to capture the current game screen as its cover. Library entries keep a local copy of each saved SWF and its cover on this device, so they can be reopened later.
+- Tap the **+** button next to a loaded game's name to save it in the Library. Use the star to favorite it, the picture button to choose an image (animated GIF covers stay animated), the camera button for a still screenshot, or **GIF** to record a four-second animated cover from the game. Library entries keep a local copy of each saved SWF and its cover on this device, so they can be reopened later.
 - Drag and drop a `.swf` file into the player window.
 - **Space**: play or pause.
 - **M**: mute or unmute.
