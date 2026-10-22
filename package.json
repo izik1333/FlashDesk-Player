@@ -1,0 +1,49 @@
+{
+  "name": "flashdesk-player",
+  "version": "1.0.4",
+  "description": "A desktop SWF player with graphics and audio controls",
+  "main": "main.js",
+  "private": true,
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build:windows": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.flashdesk.player",
+    "productName": "FlashDesk Player",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "renderer.js",
+      "package.json"
+    ],
+    "win": {
+      "target": ["nsis"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": [{
+      "provider": "github",
+      "owner": "izik1333",
+      "repo": "FlashDesk-Player",
+      "releaseType": "release"
+    }]
+  }
+}
