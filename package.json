@@ -32,6 +32,7 @@
       "package.json"
     ],
     "win": {
+      "artifactName": "FlashDesk-Player-Setup-${version}.${ext}",
       "target": [
         "nsis"
       ]
