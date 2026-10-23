@@ -646,8 +646,11 @@ function selectGifCropArea() {
   Object.assign(rect.style, { position: 'fixed', border: '2px solid #b4a2ff', background: 'rgba(143,119,255,.18)', boxShadow: '0 0 0 9999px rgba(0,0,0,.35)', display: 'none', pointerEvents: 'none' });
   overlay.append(rect); document.body.append(overlay);
   let start = null;
+  const cancel = () => { overlay.remove(); document.removeEventListener('keydown', onKeyDown); showToast('GIF area selection canceled.'); };
+  const onKeyDown = (event) => { if (event.key === 'Escape') cancel(); };
   const finish = (event) => {
     if (!start) return;
+    document.removeEventListener('keydown', onKeyDown);
     const x1 = Math.max(surface.left, Math.min(start.x, event.clientX));
     const y1 = Math.max(surface.top, Math.min(start.y, event.clientY));
     const x2 = Math.min(surface.right, Math.max(start.x, event.clientX));
@@ -655,12 +658,28 @@ function selectGifCropArea() {
     overlay.remove();
     if (x2 - x1 < 12 || y2 - y1 < 12) { showToast('GIF area selection canceled.'); return; }
     gifCrop = { x: (x1 - surface.left) / surface.width, y: (y1 - surface.top) / surface.height, width: (x2 - x1) / surface.width, height: (y2 - y1) / surface.height };
-    showToast('GIF crop area selected. Record GIF to use it.');
+    showToast('Selected game area saved. GIF will record exactly inside that box.');
   };
-  overlay.addEventListener('pointerdown', (event) => { start = { x: event.clientX, y: event.clientY }; rect.style.display = 'block'; overlay.setPointerCapture(event.pointerId); });
-  overlay.addEventListener('pointermove', (event) => { if (!start) return; Object.assign(rect.style, { left: `${Math.min(start.x,event.clientX)}px`, top: `${Math.min(start.y,event.clientY)}px`, width: `${Math.abs(event.clientX-start.x)}px`, height: `${Math.abs(event.clientY-start.y)}px` }); });
-  overlay.addEventListener('pointerup', finish, { once: true });
-  showToast('Drag across the game to choose the GIF area.');
+  overlay.addEventListener('pointerdown', (event) => {
+    if (event.clientX < surface.left || event.clientX > surface.right || event.clientY < surface.top || event.clientY > surface.bottom) {
+      showToast('Start the selection inside the game screen, then drag to the desired edge.');
+      return;
+    }
+    event.preventDefault();
+    start = { x: event.clientX, y: event.clientY };
+    rect.style.display = 'block';
+    overlay.setPointerCapture(event.pointerId);
+  });
+  overlay.addEventListener('pointermove', (event) => {
+    if (!start) return;
+    const x = Math.max(surface.left, Math.min(surface.right, event.clientX));
+    const y = Math.max(surface.top, Math.min(surface.bottom, event.clientY));
+    Object.assign(rect.style, { left: `${Math.min(start.x,x)}px`, top: `${Math.min(start.y,y)}px`, width: `${Math.abs(x-start.x)}px`, height: `${Math.abs(y-start.y)}px` });
+  });
+  overlay.addEventListener('pointerup', finish);
+  overlay.addEventListener('pointercancel', cancel, { once: true });
+  document.addEventListener('keydown', onKeyDown);
+  showToast('Drag a box directly over the game. Press Esc to cancel.');
 }
 
 async function captureGameGifCover() {
@@ -675,14 +694,6 @@ async function captureGameGifCover() {
   const frameInterval = 1000 / frameRate;
   const frames = [];
   const canvas = document.createElement('canvas');
-  canvas.width = edge;
-  canvas.height = edge;
-  const context = canvas.getContext('2d', { willReadFrequently: true });
-  if (!context) {
-    showToast('Could not prepare a GIF cover.');
-    return;
-  }
-
   gifRecording = true;
   elements.gifCoverButton.disabled = true;
   elements.gifCoverButton.textContent = 'REC';
@@ -703,14 +714,18 @@ async function captureGameGifCover() {
       const sourceY = custom ? custom.y * bitmap.height : 0;
       const sourceWidth = custom ? custom.width * bitmap.width : bitmap.width;
       const sourceHeight = custom ? custom.height * bitmap.height : bitmap.height;
-      const scale = Math.max(edge / sourceWidth, edge / sourceHeight);
-      const cropWidth = edge / scale;
-      const cropHeight = edge / scale;
-      context.drawImage(bitmap, sourceX + (sourceWidth - cropWidth) / 2, sourceY + (sourceHeight - cropHeight) / 2, cropWidth, cropHeight, 0, 0, edge, edge);
-      frames.push(context.getImageData(0, 0, edge, edge).data);
+      const scale = edge / Math.max(sourceWidth, sourceHeight);
+      const outputWidth = Math.max(1, Math.round(sourceWidth * scale));
+      const outputHeight = Math.max(1, Math.round(sourceHeight * scale));
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) throw new Error('Could not prepare a GIF cover.');
+      context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, outputWidth, outputHeight);
+      frames.push(context.getImageData(0, 0, outputWidth, outputHeight).data);
       bitmap.close();
     }
-    const gifBytes = await window.appWindow.encodeGameGif(frames, edge, edge, Math.round(frameInterval));
+    const gifBytes = await window.appWindow.encodeGameGif(frames, canvas.width, canvas.height, Math.round(frameInterval));
     const saveResult = await window.appWindow.saveGameGif(gifBytes, `${currentFileName.replace(/\.swf$/i, '')}-cover.gif`);
     await storeCurrentCover(new Blob([gifBytes], { type: 'image/gif' }), saveResult?.filePath
       ? `GIF saved to ${saveResult.filePath} and added as the library cover.`

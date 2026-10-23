@@ -63,8 +63,8 @@
               <button class="icon-btn cover-current-btn" id="cover-current-btn" aria-label="Choose a cover picture" title="Choose cover picture" disabled><svg viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><circle cx="7" cy="8" r="1.5"/><path d="m4 14 4-3 2.5 2 2.5-3 3.5 4"/></svg></button>
               <button class="icon-btn screenshot-current-btn" id="screenshot-current-btn" aria-label="Use a screenshot of the game as its cover" title="Use game screenshot as cover" disabled><svg viewBox="0 0 20 20"><path d="M3 6.5h3l1.4-2h5.2l1.4 2h3v9H3z"/><circle cx="10" cy="11" r="3"/></svg></button>
               <button class="icon-btn gif-cover-btn" id="gif-cover-btn" aria-label="Record a four-second game GIF as its cover" title="Record 4-second game GIF as cover" disabled>GIF</button>
-              <button class="icon-btn gif-crop-btn" id="gif-crop-btn" type="button" title="Select the game area for GIF recording">Crop</button>
-              <select class="gif-size-select" id="gif-size-select" aria-label="GIF output size"><option value="128">GIF 128</option><option value="256" selected>GIF 256</option><option value="384">GIF 384</option></select>
+              <button class="icon-btn gif-crop-btn" id="gif-crop-btn" type="button" title="Choose the on-screen area to record as a GIF">Area</button>
+              <select class="gif-size-select" id="gif-size-select" aria-label="GIF maximum edge size" title="Maximum width or height of the saved GIF"><option value="128">GIF max 128</option><option value="256" selected>GIF max 256</option><option value="384">GIF max 384</option></select>
               <select class="scene-select" data-scene-select hidden aria-label="Choose a game scene">
                 <option value="">Scenes</option>
                 <option value="screen6">Scene 1</option><option value="screen7">Scene 2</option><option value="screen8">Scene 3</option><option value="screen9">Scene 4</option><option value="screen10">Scene 5</option>
@@ -90,7 +90,7 @@
             <div class="fullscreen-tools" aria-label="Fullscreen game tools">
               <button class="fullscreen-tool-btn" id="fullscreen-screenshot-btn" type="button" aria-label="Use game screenshot as cover" title="Use game screenshot as cover"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6.5h3l1.4-2h5.2l1.4 2h3v9H3z"/><circle cx="10" cy="11" r="3"/></svg><span>Screenshot</span></button>
               <button class="fullscreen-tool-btn" id="fullscreen-gif-btn" type="button" aria-label="Record a four-second game GIF as its cover" title="Record 4-second game GIF as cover">GIF</button>
-              <button class="fullscreen-tool-btn" id="fullscreen-gif-crop-btn" type="button" title="Select GIF crop area">Crop</button>
+              <button class="fullscreen-tool-btn" id="fullscreen-gif-crop-btn" type="button" title="Choose the on-screen area to record as a GIF">GIF area</button>
               <select class="scene-select fullscreen-scene-select" data-scene-select hidden aria-label="Choose a game scene">
                 <option value="">Scenes</option>
                 <option value="screen6">Scene 1</option><option value="screen7">Scene 2</option><option value="screen8">Scene 3</option><option value="screen9">Scene 4</option><option value="screen10">Scene 5</option>
@@ -242,7 +242,7 @@
       <div class="favorites-list" id="favorites-list" aria-live="polite"></div>
     </section>
 
-    <footer class="app-footer"><span>FLASHDESK PLAYER <span class="footer-dot">•</span> 1.0.10</span><span class="footer-shortcuts"><kbd>SPACE</kbd> play / pause <span class="footer-gap"></span><kbd>M</kbd> mute</span></footer>
+    <footer class="app-footer"><span>FLASHDESK PLAYER <span class="footer-dot">•</span> 1.0.11</span><span class="footer-shortcuts"><kbd>SPACE</kbd> play / pause <span class="footer-gap"></span><kbd>M</kbd> mute</span></footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

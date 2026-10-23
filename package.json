@@ -1,6 +1,6 @@
 {
   "name": "flashdesk-player",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "A desktop SWF player with graphics and audio controls",
   "main": "main.js",
   "private": true,

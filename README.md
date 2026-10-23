@@ -4,7 +4,7 @@ A Windows desktop SWF player with audio controls and a picture-enhancement panel
 
 ## Install the standalone app
 
-Run **FlashDesk-Player-Setup-1.0.10.exe** from the deliverables folder. The installed app runs without Node.js.
+Run **FlashDesk-Player-Setup-1.0.11.exe** from the deliverables folder. The installed app runs without Node.js.
 
 ## Run from source
 
@@ -25,7 +25,7 @@ FlashDesk checks the public GitHub Releases feed at `izik1333/FlashDesk-Player`.
 
 - **Open SWF** or **Ctrl+O**: choose a movie.
 - The **Play** button reopens the most recently played SWF. FlashDesk keeps that one recent game locally on this device; if there is no recent game, Play opens the file picker.
-- Tap the **+** button next to a loaded game's name to save it in the Library. Use the star to favorite it, the picture button to choose an image (animated GIF covers stay animated), the camera button for a still screenshot, or **GIF** to record a four-second animated cover from the game. The fullscreen toolbar also has screenshot and GIF capture buttons. Library entries keep a local copy of each saved SWF and its cover on this device, so they can be reopened later.
+- Tap the **+** button next to a loaded game's name to save it in the Library. Use the star to favorite it, the picture button to choose an image (animated GIF covers stay animated), the camera button for a still screenshot, or **GIF** to record a four-second animated cover from the game. Use **Area** first to draw a box directly over the live game; the saved GIF records exactly that part of the screen and preserves its aspect ratio. GIF max size sets its longest edge. The fullscreen toolbar also has screenshot and GIF capture buttons. Library entries keep a local copy of each saved SWF and its cover on this device, so they can be reopened later.
 - Drag and drop a `.swf` file into the player window.
 - **Space**: play or pause.
 - **M**: mute or unmute.
