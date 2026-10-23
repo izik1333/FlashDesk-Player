@@ -118,6 +118,9 @@ button { color: inherit; }
 .cover-current-btn { color: #8994a5; }
 .screenshot-current-btn { color: #8994a5; }
 .gif-cover-btn { flex: 0 0 28px; color: #8994a5; font-size: 7px; font-weight: 800; letter-spacing: .2px; }
+.scene-select { width: 100px; height: 27px; margin: 0 3px; padding: 0 7px; border: 1px solid #333a4a; border-radius: 6px; background: #151a24; color: #aeb5c5; font-size: 9px; cursor: pointer; }
+.scene-select:hover { border-color: #5a527f; color: #d9d5ff; }
+.scene-select:focus-visible { outline: 2px solid #aa9cff; outline-offset: 2px; }
 .screenshot-current-btn:disabled { opacity: .35; cursor: default; }
 .gif-cover-btn:disabled { opacity: .35; cursor: default; }
 .favorite-current-btn:disabled { opacity: .35; cursor: default; }
@@ -261,6 +264,7 @@ kbd { padding: 2px 5px; border: 1px solid #313745; border-radius: 4px; backgroun
 /* Immersive movie mode: use the native fullscreen window and let the SWF fill it. */
 .fullscreen-tools { position: absolute; z-index: 12; top: 18px; right: 20px; display: none; align-items: center; gap: 7px; opacity: 0; pointer-events: none; transition: opacity .2s; }
 .fullscreen-tool-btn, .fullscreen-exit { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 0 11px; border: 1px solid rgba(255,255,255,.18); border-radius: 8px; background: rgba(20,23,32,.76); color: #edf0f7; font: inherit; font-size: 10px; cursor: pointer; backdrop-filter: blur(12px); transition: background .15s, border-color .15s; }
+.fullscreen-scene-select { width: 112px; height: 36px; margin: 0; border-color: rgba(255,255,255,.18); background: rgba(20,23,32,.82); color: #edf0f7; font-size: 10px; backdrop-filter: blur(12px); }
 .fullscreen-tool-btn:hover:not(:disabled), .fullscreen-exit:hover { border-color: rgba(183,169,255,.55); background: rgba(40,43,57,.94); }
 .fullscreen-tool-btn:disabled { opacity: .45; cursor: default; }
 .fullscreen-tool-btn svg, .fullscreen-exit svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }

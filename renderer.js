@@ -17,6 +17,7 @@ let libraryRecords = [];
 let libraryFilter = 'all';
 let libraryViewMode = readLibraryViewMode();
 let libraryCoverUrls = [];
+let gameSceneTargets = [];
 let favoritesDbPromise = null;
 let recentGame = null;
 let recentGamePromise = null;
@@ -42,6 +43,7 @@ const elements = {
   filePicker: $('file-picker'), openButton: $('open-file-btn'), browseButton: $('browse-file-btn'),
   favoritesCount: $('favorites-count'),
   favoritesList: $('favorites-list'), favoriteCurrentButton: $('favorite-current-btn'),
+  sceneSelects: Array.from(document.querySelectorAll('[data-scene-select]')),
   libraryCurrentButton: $('library-current-btn'), coverCurrentButton: $('cover-current-btn'),
   screenshotCurrentButton: $('screenshot-current-btn'), gifCoverButton: $('gif-cover-btn'),
   fullscreenScreenshotButton: $('fullscreen-screenshot-btn'), fullscreenGifButton: $('fullscreen-gif-btn'), coverPicker: $('cover-picker'),
@@ -354,6 +356,30 @@ function syncLibraryButtons() {
   elements.favoriteCurrentButton.classList.toggle('is-favorite', isFavorite);
   elements.favoriteCurrentButton.setAttribute('aria-label', isFavorite ? 'Remove current game from favorites' : 'Add current game to favorites');
   elements.favoriteCurrentButton.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
+}
+
+function setGameSceneTargets(targets) {
+  const supported = Array.isArray(targets) ? targets.filter((scene) =>
+    /^screen(?:6|7|8|9|10)$/.test(scene?.target) && typeof scene.label === 'string') : [];
+  gameSceneTargets = supported;
+  elements.sceneSelects.forEach((select) => {
+    select.hidden = supported.length === 0;
+    select.value = '';
+  });
+}
+
+function selectGameScene(event) {
+  const target = event.currentTarget.value;
+  event.currentTarget.value = '';
+  const scene = gameSceneTargets.find((item) => item.target === target);
+  if (!scene || !currentPlayer) return;
+  try {
+    const opened = currentPlayer.ruffle().callExternalInterface('flashdeskSelectScene', scene.target);
+    if (opened === true) showToast(`${scene.label} opened.`);
+    else showToast('This game could not switch scenes right now.');
+  } catch {
+    showToast('This game could not switch scenes right now.');
+  }
 }
 
 function renderLibrary() {
@@ -726,9 +752,9 @@ function createPlayer() {
   return player;
 }
 
-function getCurrentLoadOptions() {
+function getCurrentLoadOptions(data = currentBuffer) {
   return {
-    data: currentBuffer,
+    data,
     swfFileName: currentFileName,
     autoplay: 'on',
     unmuteOverlay: 'hidden',
@@ -763,12 +789,23 @@ function schedulePlayerViewportSync() {
 
 async function runCurrentGame({ clearOnFailure = true } = {}) {
   if (!currentBuffer || !currentFileName) return;
+  setGameSceneTargets([]);
   elements.stageOverlay.hidden = false;
   elements.stageOverlay.textContent = 'Applying game settings…';
   setEngineState('Loading game…', 'loading');
   try {
     const player = currentPlayer || createPlayer();
-    await player.ruffle().load(getCurrentLoadOptions());
+    const preparedGame = window.appWindow?.prepareSceneControls
+      ? await window.appWindow.prepareSceneControls(currentBuffer)
+      : { data: currentBuffer, scenes: [] };
+    await player.ruffle().load(getCurrentLoadOptions(preparedGame?.data || currentBuffer));
+    if (preparedGame?.scenes?.length) {
+      try {
+        if (player.ruffle().callExternalInterface('flashdeskSceneControlsReady') === true) {
+          setGameSceneTargets(preparedGame.scenes);
+        }
+      } catch { /* Keep scene controls hidden when the SWF bridge is unavailable. */ }
+    }
     elements.emptyState.classList.add('hidden');
     elements.fileName.textContent = currentFileName;
     elements.fileDetails.textContent = `${formatBytes(currentBuffer.byteLength)}  ·  SWF game or animation`;
@@ -800,6 +837,7 @@ async function runCurrentGame({ clearOnFailure = true } = {}) {
       currentBuffer = null;
       currentFileName = '';
       currentLibraryId = null;
+      setGameSceneTargets([]);
       syncLibraryButtons();
       syncRecentPlayButton();
     }
@@ -962,6 +1000,7 @@ function bindEvents() {
   elements.gifCoverButton.addEventListener('click', captureGameGifCover);
   elements.fullscreenScreenshotButton.addEventListener('click', captureGameCover);
   elements.fullscreenGifButton.addEventListener('click', captureGameGifCover);
+  elements.sceneSelects.forEach((select) => select.addEventListener('change', selectGameScene));
   elements.coverPicker.addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (file) chooseCoverImage(file);

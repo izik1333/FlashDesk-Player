@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const zlib = require('node:zlib');
 const { autoUpdater } = require('electron-updater');
 const { GIFEncoder, quantize, applyPalette } = require('gifenc');
 
@@ -9,6 +10,140 @@ autoUpdater.autoInstallOnAppQuit = true;
 
 function hasUpdateFeed() {
   return app.isPackaged && fs.existsSync(path.join(process.resourcesPath, 'app-update.yml'));
+}
+
+function u16(value) {
+  const bytes = Buffer.alloc(2);
+  bytes.writeUInt16LE(value);
+  return bytes;
+}
+
+function avm1Record(opcode, payload = Buffer.alloc(0)) {
+  if (opcode < 0x80) return Buffer.from([opcode]);
+  return Buffer.concat([Buffer.from([opcode]), u16(payload.length), payload]);
+}
+
+function avm1PushString(value) {
+  return avm1Record(0x96, Buffer.concat([Buffer.from([0]), Buffer.from(`${value}\0`, 'utf8')]));
+}
+
+function avm1PushInteger(value) {
+  const payload = Buffer.alloc(5);
+  payload[0] = 7;
+  payload.writeInt32LE(value, 1);
+  return avm1Record(0x96, payload);
+}
+
+function avm1DefineFunction2(parameterNames, body) {
+  const parameters = parameterNames.flatMap((name) => [Buffer.from([0]), Buffer.from(`${name}\0`, 'utf8')]);
+  const header = Buffer.concat([
+    Buffer.from([0]), u16(parameterNames.length), Buffer.from([0]), u16(0),
+    ...parameters, u16(body.length)
+  ]);
+  return Buffer.concat([Buffer.from([0x8e]), u16(header.length), header, body]);
+}
+
+function avm1ExternalCallback(name, parameters, body) {
+  return Buffer.concat([
+    avm1DefineFunction2(parameters, body),
+    avm1PushString('_root'), avm1Record(0x1c),
+    avm1PushString(name), avm1PushString('addCallback'),
+    avm1PushString('flash.external.ExternalInterface'), avm1Record(0x1c),
+    avm1PushInteger(3), avm1Record(0x52), avm1Record(0x17)
+  ]);
+}
+
+function makeSceneBridgeActions() {
+  const sceneCall = Buffer.concat([
+    avm1PushString('sceneName'), avm1Record(0x1c),
+    avm1PushString('gotoScreen'), avm1PushString('_root'), avm1Record(0x1c),
+    avm1PushInteger(1), avm1Record(0x52), avm1Record(0x17),
+    avm1Record(0x96, Buffer.from([5, 1])), avm1Record(0x3e), Buffer.from([0])
+  ]);
+  const ready = Buffer.concat([
+    avm1Record(0x96, Buffer.from([5, 1])), avm1Record(0x3e), Buffer.from([0])
+  ]);
+  const callbacks = Buffer.concat([
+    avm1ExternalCallback('flashdeskSelectScene', ['sceneName'], sceneCall),
+    avm1ExternalCallback('flashdeskSceneControlsReady', [], ready)
+  ]);
+  const checkInterface = Buffer.concat([
+    avm1PushString('flash.external.ExternalInterface'), avm1Record(0x1c), avm1Record(0x44),
+    avm1PushString('undefined'), avm1Record(0x49)
+  ]);
+  const jump = Buffer.concat([Buffer.from([0x9d]), u16(2), u16(callbacks.length)]);
+  return Buffer.concat([checkInterface, jump, callbacks, Buffer.from([0])]);
+}
+
+function prepareGameSceneControls(inputData) {
+  let source;
+  try {
+    source = Buffer.isBuffer(inputData)
+      ? Buffer.from(inputData)
+      : (inputData?.type === 'Buffer' ? Buffer.from(inputData.data) : Buffer.from(inputData));
+  } catch {
+    throw new Error('Could not read the loaded SWF for scene controls.');
+  }
+  const original = { data: source.buffer.slice(source.byteOffset, source.byteOffset + source.byteLength), scenes: [] };
+  const signature = source.toString('ascii', 0, 3);
+  if (signature !== 'FWS' && signature !== 'CWS') return original;
+
+  let movie;
+  try {
+    movie = signature === 'CWS'
+      ? Buffer.concat([Buffer.from('FWS'), source.subarray(3, 8), zlib.inflateSync(source.subarray(8))])
+      : source;
+  } catch {
+    return original;
+  }
+  const dataText = movie.toString('latin1');
+  const sceneTargets = ['screen6', 'screen7', 'screen8', 'screen9', 'screen10'];
+  if (!['btn_scene1', 'btn_scene2', 'btn_scene3', 'btn_scene4', 'btn_scene5', 'gotoScreen', ...sceneTargets].every((marker) => dataText.includes(marker))) {
+    return original;
+  }
+
+  let offset = 8 + Math.ceil((5 + 4 * (movie[8] >> 3)) / 8) + 4;
+  let frame = 0;
+  let inserted = false;
+  const chunks = [movie.subarray(0, offset)];
+  const bridgeTagBody = makeSceneBridgeActions();
+  const bridgeTagHeader = Buffer.alloc(6);
+  bridgeTagHeader.writeUInt16LE((12 << 6) | 63, 0);
+  bridgeTagHeader.writeUInt32LE(bridgeTagBody.length, 2);
+  const bridgeTag = Buffer.concat([bridgeTagHeader, bridgeTagBody]);
+
+  while (offset + 2 <= movie.length) {
+    const start = offset;
+    const tagHeader = movie.readUInt16LE(offset);
+    offset += 2;
+    const code = tagHeader >> 6;
+    let length = tagHeader & 63;
+    if (length === 63) {
+      if (offset + 4 > movie.length) return original;
+      length = movie.readUInt32LE(offset);
+      offset += 4;
+    }
+    const end = offset + length;
+    if (end > movie.length) return original;
+    const body = movie.subarray(offset, end);
+    chunks.push(movie.subarray(start, end));
+    if (!inserted && code === 12 && frame >= 2 && body.includes(Buffer.from('gotoScreen', 'ascii'))) {
+      chunks.push(bridgeTag);
+      inserted = true;
+    }
+    offset = end;
+    if (code === 1) frame += 1;
+    if (code === 0) break;
+  }
+  if (!inserted) return original;
+
+  const patched = Buffer.concat(chunks);
+  patched.write('FWS', 0, 3, 'ascii');
+  patched.writeUInt32LE(patched.length, 4);
+  return {
+    data: patched.buffer.slice(patched.byteOffset, patched.byteOffset + patched.byteLength),
+    scenes: sceneTargets.map((target, index) => ({ label: `Scene ${index + 1}`, target }))
+  };
 }
 
 function encodeGameGif(frames, width, height, delay = 170) {
@@ -95,6 +230,7 @@ function createWindow() {
   ipcMain.removeHandler('updater:install');
   ipcMain.removeHandler('player:capture-frame');
   ipcMain.removeHandler('player:encode-gif');
+  ipcMain.removeHandler('player:prepare-scenes');
   ipcMain.handle('window:minimize', () => win.minimize());
   ipcMain.handle('window:toggle-maximize', () => {
     if (win.isMaximized()) win.unmaximize();
@@ -143,6 +279,12 @@ function createWindow() {
   });
   ipcMain.handle('player:encode-gif', (_event, frames, width, height, delay) =>
     encodeGameGif(frames, width, height, delay));
+  ipcMain.handle('player:prepare-scenes', (event, data) => {
+    if (!event.senderFrame?.url?.startsWith('file://')) {
+      throw new Error('Scene controls can only be prepared from the FlashDesk window.');
+    }
+    return prepareGameSceneControls(data);
+  });
   ipcMain.handle('updater:get-status', () => ({
     state: app.isPackaged ? (hasUpdateFeed() ? 'idle' : 'unconfigured') : 'unavailable',
     currentVersion: app.getVersion(),
