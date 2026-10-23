@@ -85,18 +85,31 @@ function createWindow() {
     if (!event.senderFrame?.url?.startsWith('file://')) {
       throw new Error('Game screenshots can only be captured from the FlashDesk window.');
     }
-    const rectangle = {
-      x: Math.max(0, Math.floor(Number(bounds?.x) || 0)),
-      y: Math.max(0, Math.floor(Number(bounds?.y) || 0)),
-      width: Math.min(10000, Math.max(1, Math.ceil(Number(bounds?.width) || 0))),
-      height: Math.min(10000, Math.max(1, Math.ceil(Number(bounds?.height) || 0)))
-    };
-    if (!Number.isFinite(rectangle.x) || !Number.isFinite(rectangle.y) || rectangle.width < 1 || rectangle.height < 1) {
+    const x = Number(bounds?.x);
+    const y = Number(bounds?.y);
+    const width = Number(bounds?.width);
+    const height = Number(bounds?.height);
+    const viewportWidth = Number(bounds?.viewportWidth);
+    const viewportHeight = Number(bounds?.viewportHeight);
+    if (![x, y, width, height, viewportWidth, viewportHeight].every(Number.isFinite) ||
+        width < 1 || height < 1 || viewportWidth < 1 || viewportHeight < 1) {
       throw new Error('The game screen has invalid capture bounds.');
     }
-    const image = await event.sender.capturePage(rectangle);
+    // Capture the composited page first, then crop in native-image pixels. This
+    // avoids WebContents.capturePage(rect) DPI/zoom discrepancies on Windows.
+    const image = await event.sender.capturePage();
     if (image.isEmpty()) throw new Error('The game screen could not be captured.');
-    return image.toPNG();
+    const imageSize = image.getSize();
+    const scaleX = imageSize.width / viewportWidth;
+    const scaleY = imageSize.height / viewportHeight;
+    const left = Math.max(0, Math.floor(x * scaleX));
+    const top = Math.max(0, Math.floor(y * scaleY));
+    const right = Math.min(imageSize.width, Math.ceil((x + width) * scaleX));
+    const bottom = Math.min(imageSize.height, Math.ceil((y + height) * scaleY));
+    if (right <= left || bottom <= top) throw new Error('The game screen is outside the visible window.');
+    const croppedImage = image.crop({ x: left, y: top, width: right - left, height: bottom - top });
+    if (croppedImage.isEmpty()) throw new Error('The game screen could not be cropped.');
+    return croppedImage.toPNG();
   });
   ipcMain.handle('updater:get-status', () => ({
     state: app.isPackaged ? (hasUpdateFeed() ? 'idle' : 'unconfigured') : 'unavailable',

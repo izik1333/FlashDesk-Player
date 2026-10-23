@@ -4,7 +4,7 @@ A Windows desktop SWF player with audio controls and a picture-enhancement panel
 
 ## Install the standalone app
 
-Run **FlashDesk-Player-Setup-1.0.4.exe** from the deliverables folder. The installed app runs without Node.js.
+Run **FlashDesk-Player-Setup-1.0.5.exe** from the deliverables folder. The installed app runs without Node.js.
 
 ## Run from source
 
@@ -25,11 +25,11 @@ FlashDesk checks the public GitHub Releases feed at `izik1333/FlashDesk-Player`.
 
 - **Open SWF** or **Ctrl+O**: choose a movie.
 - The **Play** button reopens the most recently played SWF. FlashDesk keeps that one recent game locally on this device; if there is no recent game, Play opens the file picker.
-- Tap the **+** button next to a loaded game's name to save it in the Library. Use the star to favorite it, the picture button to choose an image (animated GIF covers stay animated), the camera button for a still screenshot, or **GIF** to record a four-second animated cover from the game. Library entries keep a local copy of each saved SWF and its cover on this device, so they can be reopened later.
+- Tap the **+** button next to a loaded game's name to save it in the Library. Use the star to favorite it, the picture button to choose an image (animated GIF covers stay animated), the camera button for a still screenshot, or **GIF** to record a four-second animated cover from the game. The fullscreen toolbar also has screenshot and GIF capture buttons. Library entries keep a local copy of each saved SWF and its cover on this device, so they can be reopened later.
 - Drag and drop a `.swf` file into the player window.
 - **Space**: play or pause.
 - **M**: mute or unmute.
-- Use the Library button to reopen saved games, filter favorites, change favorite status, and remove entries.
+- Use the **Library** tab to browse saved games as cover cards, filter favorites, change favorite status, and remove entries. Select a card to start its game; use **Player** to return to the game screen.
 - Use the settings panel for game and animation picture adjustments, brightness, contrast, color, crisp pixel scaling, presets, volume, and update checks.
 - Resolution scaling supports fit, stretch, crop, and original size. Render quality can be set to high, balanced, or fast; changing either restarts the currently loaded game after confirmation.
 - Crisp pixel scaling and the separate game color enhancer apply to Ruffle's rendered canvas, including fullscreen games.
