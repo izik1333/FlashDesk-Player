@@ -540,7 +540,7 @@ async function toggleCurrentFavorite() {
 }
 
 async function createCoverThumbnail(file) {
-  // Keep animated GIF data intact; the square cover element crops it visually.
+  // Keep animated GIF data intact so the library can show the full animation.
   if (file.type === 'image/gif' || /\.gif$/i.test(file.name || '')) {
     return new Blob([file], { type: 'image/gif' });
   }
@@ -994,12 +994,12 @@ function renderUpdateState(update = {}) {
   elements.updateProgressFill.style.width = `${percent}%`;
 
   const view = {
-    idle: { message: 'Check for a newer version.', button: 'Check for updates', disabled: false },
+    idle: { message: 'New versions download automatically after you check.', button: 'Check for updates', disabled: false },
     checking: { message: 'Checking for updates…', button: 'Checking…', disabled: true },
     current: { message: `You’re up to date${version ? ` · v${version}` : ''}.`, button: 'Check again', disabled: false },
-    available: { message: `Version ${version ? `v${version}` : ''} is available.`, button: 'Download update', disabled: false },
+    available: { message: `Version ${version ? `v${version}` : ''} is available. Starting download…`, button: 'Downloading…', disabled: true },
     downloading: { message: `Downloading update… ${Math.round(percent)}%`, button: 'Downloading…', disabled: true },
-    downloaded: { message: `Version ${version ? `v${version}` : ''} is ready to install.`, button: 'Restart to update', disabled: false },
+    downloaded: { message: `Version ${version ? `v${version}` : ''} is ready. Restart FlashDesk or close it to install.`, button: 'Restart to update', disabled: false },
     unconfigured: { message: 'Connect a GitHub Releases feed to enable updates.', button: 'Not configured', disabled: true },
     unavailable: { message: 'Updates are available in the installed app.', button: 'Unavailable here', disabled: true },
     error: { message: update.message || 'Could not check for updates.', button: 'Try again', disabled: false }

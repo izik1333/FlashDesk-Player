@@ -79,7 +79,7 @@ button { color: inherit; }
 .favorite-row { position: relative; display: flex; min-width: 0; flex-direction: column; overflow: hidden; border: 1px solid #292f3d; border-radius: 10px; background: linear-gradient(180deg,#171c27,#121720); transition: border-color .16s, transform .16s, box-shadow .16s; }
 .favorite-row:hover { transform: translateY(-2px); border-color: #514a74; box-shadow: 0 10px 25px rgba(0,0,0,.22); }
 .favorite-cover { position: relative; width: 100%; aspect-ratio: 16 / 10; display: grid; place-items: center; overflow: hidden; border: 0; border-bottom: 1px solid #292f3d; border-radius: 0; background: radial-gradient(ellipse at center, #24283a, #141923 72%); color: #788397; }
-.favorite-cover img { width: 100%; height: 100%; object-fit: cover; }
+.favorite-cover img { width: 100%; height: 100%; object-fit: contain; }
 .favorite-cover svg { width: 31px; height: 31px; fill: none; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; opacity: .68; }
 .library-card-actions { position: absolute; top: 9px; right: 9px; z-index: 2; display: flex; gap: 4px; padding: 3px; border: 1px solid rgba(255,255,255,.08); border-radius: 8px; background: rgba(11,14,20,.78); backdrop-filter: blur(8px); }
 .library-card-actions .icon-btn { width: 29px; height: 29px; }

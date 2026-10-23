@@ -5,7 +5,7 @@ const zlib = require('node:zlib');
 const { autoUpdater } = require('electron-updater');
 const { GIFEncoder, quantize, applyPalette } = require('gifenc');
 
-autoUpdater.autoDownload = false;
+autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
 function hasUpdateFeed() {

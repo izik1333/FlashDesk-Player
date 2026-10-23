@@ -4,7 +4,7 @@ A Windows desktop SWF player with audio controls and a picture-enhancement panel
 
 ## Install the standalone app
 
-Run **FlashDesk-Player-Setup-1.0.12.exe** from the deliverables folder. The installed app runs without Node.js.
+Run **FlashDesk-Player-Setup-1.0.13.exe** from the deliverables folder. The installed app runs without Node.js.
 
 ## Run from source
 
@@ -19,7 +19,7 @@ Run `npm run build:windows`. The installer will be created in `release/`.
 
 ## App updates
 
-FlashDesk checks the public GitHub Releases feed at `izik1333/FlashDesk-Player`. The packaged app includes the feed configuration; releases should include the generated installer, `latest.yml`, and blockmap so the in-app update button can find and install newer versions.
+FlashDesk checks the public GitHub Releases feed at `izik1333/FlashDesk-Player`. After you check for updates, new versions download automatically. Restart FlashDesk, or close it to install the downloaded update on exit. Releases should include the generated installer, `latest.yml`, and blockmap.
 
 ## Controls
 
