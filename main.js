@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const zlib = require('node:zlib');
@@ -240,6 +240,7 @@ function createWindow() {
   ipcMain.removeHandler('updater:install');
   ipcMain.removeHandler('player:capture-frame');
   ipcMain.removeHandler('player:encode-gif');
+  ipcMain.removeHandler('player:save-gif');
   ipcMain.removeHandler('player:prepare-scenes');
   ipcMain.handle('window:minimize', () => win.minimize());
   ipcMain.handle('window:toggle-maximize', () => {
@@ -289,6 +290,21 @@ function createWindow() {
   });
   ipcMain.handle('player:encode-gif', (_event, frames, width, height, delay) =>
     encodeGameGif(frames, width, height, delay));
+  ipcMain.handle('player:save-gif', async (event, bytes, suggestedName) => {
+    if (!event.senderFrame?.url?.startsWith('file://')) {
+      throw new Error('GIF files can only be saved from the FlashDesk window.');
+    }
+    const baseName = path.basename(String(suggestedName || 'FlashDesk-game.gif')).replace(/[<>:"/\\|?*\x00-\x1f]/g, '_');
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Save game GIF',
+      defaultPath: path.join(app.getPath('pictures'), baseName.endsWith('.gif') ? baseName : `${baseName}.gif`),
+      filters: [{ name: 'GIF image', extensions: ['gif'] }]
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+    const output = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+    await fs.promises.writeFile(result.filePath, output);
+    return { canceled: false, filePath: result.filePath };
+  });
   ipcMain.handle('player:prepare-scenes', (event, data) => {
     if (!event.senderFrame?.url?.startsWith('file://')) {
       throw new Error('Scene controls can only be prepared from the FlashDesk window.');

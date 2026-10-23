@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('appWindow', {
   getUpdateStatus: () => ipcRenderer.invoke('updater:get-status'),
   captureGameFrame: (bounds) => ipcRenderer.invoke('player:capture-frame', bounds),
   encodeGameGif: (frames, width, height, delay) => ipcRenderer.invoke('player:encode-gif', frames, width, height, delay),
+  saveGameGif: (bytes, suggestedName) => ipcRenderer.invoke('player:save-gif', bytes, suggestedName),
   prepareSceneControls: (data) => ipcRenderer.invoke('player:prepare-scenes', data),
   checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   downloadUpdate: () => ipcRenderer.invoke('updater:download'),

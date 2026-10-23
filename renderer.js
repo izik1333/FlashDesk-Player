@@ -22,6 +22,7 @@ let favoritesDbPromise = null;
 let recentGame = null;
 let recentGamePromise = null;
 let gifRecording = false;
+let gifCrop = null;
 let toastTimer = null;
 let fullscreenControlsTimer = null;
 let viewportSyncFrame = 0;
@@ -46,7 +47,8 @@ const elements = {
   sceneSelects: Array.from(document.querySelectorAll('[data-scene-select]')),
   libraryCurrentButton: $('library-current-btn'), coverCurrentButton: $('cover-current-btn'),
   screenshotCurrentButton: $('screenshot-current-btn'), gifCoverButton: $('gif-cover-btn'),
-  fullscreenScreenshotButton: $('fullscreen-screenshot-btn'), fullscreenGifButton: $('fullscreen-gif-btn'), coverPicker: $('cover-picker'),
+  gifCropButton: $('gif-crop-btn'), gifSizeSelect: $('gif-size-select'),
+  fullscreenScreenshotButton: $('fullscreen-screenshot-btn'), fullscreenGifButton: $('fullscreen-gif-btn'), fullscreenGifCropButton: $('fullscreen-gif-crop-btn'), coverPicker: $('cover-picker'),
   dropZone: $('drop-zone'), dropHint: $('drop-hint'), emptyState: $('empty-state'), playerMount: $('player-mount'), stageOverlay: $('stage-overlay'),
   fileName: $('file-name'), fileDetails: $('file-details'), movieState: $('movie-state'),
   engineStatus: $('engine-status'), engineDot: $('engine-dot'), playButton: $('play-btn'),
@@ -634,12 +636,39 @@ async function captureGameCover() {
   }
 }
 
+function selectGifCropArea() {
+  if (!currentPlayer) { showToast('Open a game before selecting a GIF area.'); return; }
+  let surface;
+  try { surface = getGameSurfaceBounds(); } catch (error) { showToast(error.message); return; }
+  const overlay = document.createElement('div');
+  Object.assign(overlay.style, { position: 'fixed', inset: '0', zIndex: '99999', cursor: 'crosshair', touchAction: 'none', background: 'rgba(8,10,16,.12)' });
+  const rect = document.createElement('div');
+  Object.assign(rect.style, { position: 'fixed', border: '2px solid #b4a2ff', background: 'rgba(143,119,255,.18)', boxShadow: '0 0 0 9999px rgba(0,0,0,.35)', display: 'none', pointerEvents: 'none' });
+  overlay.append(rect); document.body.append(overlay);
+  let start = null;
+  const finish = (event) => {
+    if (!start) return;
+    const x1 = Math.max(surface.left, Math.min(start.x, event.clientX));
+    const y1 = Math.max(surface.top, Math.min(start.y, event.clientY));
+    const x2 = Math.min(surface.right, Math.max(start.x, event.clientX));
+    const y2 = Math.min(surface.bottom, Math.max(start.y, event.clientY));
+    overlay.remove();
+    if (x2 - x1 < 12 || y2 - y1 < 12) { showToast('GIF area selection canceled.'); return; }
+    gifCrop = { x: (x1 - surface.left) / surface.width, y: (y1 - surface.top) / surface.height, width: (x2 - x1) / surface.width, height: (y2 - y1) / surface.height };
+    showToast('GIF crop area selected. Record GIF to use it.');
+  };
+  overlay.addEventListener('pointerdown', (event) => { start = { x: event.clientX, y: event.clientY }; rect.style.display = 'block'; overlay.setPointerCapture(event.pointerId); });
+  overlay.addEventListener('pointermove', (event) => { if (!start) return; Object.assign(rect.style, { left: `${Math.min(start.x,event.clientX)}px`, top: `${Math.min(start.y,event.clientY)}px`, width: `${Math.abs(event.clientX-start.x)}px`, height: `${Math.abs(event.clientY-start.y)}px` }); });
+  overlay.addEventListener('pointerup', finish, { once: true });
+  showToast('Drag across the game to choose the GIF area.');
+}
+
 async function captureGameGifCover() {
   if (!currentPlayer || !window.appWindow?.encodeGameGif) {
     showToast('Game GIF capture is unavailable. Restart FlashDesk and try again.');
     return;
   }
-  const edge = 256;
+  const edge = Number(elements.gifSizeSelect.value) || 256;
   const frameRate = 15;
   const durationMs = 4000;
   const frameCount = Math.ceil(durationMs / 1000 * frameRate);
@@ -669,15 +698,23 @@ async function captureGameGifCover() {
       const waitMs = startedAt + index * frameInterval - performance.now();
       if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
       const bitmap = await createImageBitmap(await captureGameFrameBlob());
-      const scale = Math.max(edge / bitmap.width, edge / bitmap.height);
+      const custom = gifCrop;
+      const sourceX = custom ? custom.x * bitmap.width : 0;
+      const sourceY = custom ? custom.y * bitmap.height : 0;
+      const sourceWidth = custom ? custom.width * bitmap.width : bitmap.width;
+      const sourceHeight = custom ? custom.height * bitmap.height : bitmap.height;
+      const scale = Math.max(edge / sourceWidth, edge / sourceHeight);
       const cropWidth = edge / scale;
       const cropHeight = edge / scale;
-      context.drawImage(bitmap, (bitmap.width - cropWidth) / 2, (bitmap.height - cropHeight) / 2, cropWidth, cropHeight, 0, 0, edge, edge);
+      context.drawImage(bitmap, sourceX + (sourceWidth - cropWidth) / 2, sourceY + (sourceHeight - cropHeight) / 2, cropWidth, cropHeight, 0, 0, edge, edge);
       frames.push(context.getImageData(0, 0, edge, edge).data);
       bitmap.close();
     }
     const gifBytes = await window.appWindow.encodeGameGif(frames, edge, edge, Math.round(frameInterval));
-    await storeCurrentCover(new Blob([gifBytes], { type: 'image/gif' }), 'Animated game GIF cover saved.');
+    const saveResult = await window.appWindow.saveGameGif(gifBytes, `${currentFileName.replace(/\.swf$/i, '')}-cover.gif`);
+    await storeCurrentCover(new Blob([gifBytes], { type: 'image/gif' }), saveResult?.filePath
+      ? `GIF saved to ${saveResult.filePath} and added as the library cover.`
+      : 'GIF added as the library cover; file export canceled.');
   } catch (error) {
     showToast(error?.message || 'Could not record an animated game cover.');
   } finally {
@@ -799,13 +836,7 @@ async function runCurrentGame({ clearOnFailure = true } = {}) {
       ? await window.appWindow.prepareSceneControls(currentBuffer)
       : { data: currentBuffer, scenes: [] };
     await player.ruffle().load(getCurrentLoadOptions(preparedGame?.data || currentBuffer));
-    if (preparedGame?.scenes?.length) {
-      try {
-        if (player.ruffle().callExternalInterface('flashdeskSceneControlsReady') === true) {
-          setGameSceneTargets(preparedGame.scenes);
-        }
-      } catch { /* Keep scene controls hidden when the SWF bridge is unavailable. */ }
-    }
+      if (preparedGame?.scenes?.length) setGameSceneTargets(preparedGame.scenes);
     elements.emptyState.classList.add('hidden');
     elements.fileName.textContent = currentFileName;
     elements.fileDetails.textContent = `${formatBytes(currentBuffer.byteLength)}  ·  SWF game or animation`;
@@ -998,8 +1029,10 @@ function bindEvents() {
   elements.coverCurrentButton.addEventListener('click', () => elements.coverPicker.click());
   elements.screenshotCurrentButton.addEventListener('click', captureGameCover);
   elements.gifCoverButton.addEventListener('click', captureGameGifCover);
+  elements.gifCropButton.addEventListener('click', selectGifCropArea);
   elements.fullscreenScreenshotButton.addEventListener('click', captureGameCover);
   elements.fullscreenGifButton.addEventListener('click', captureGameGifCover);
+  elements.fullscreenGifCropButton.addEventListener('click', selectGifCropArea);
   elements.sceneSelects.forEach((select) => select.addEventListener('change', selectGameScene));
   elements.coverPicker.addEventListener('change', (event) => {
     const file = event.target.files?.[0];

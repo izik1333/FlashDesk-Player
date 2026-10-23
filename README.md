@@ -4,7 +4,7 @@ A Windows desktop SWF player with audio controls and a picture-enhancement panel
 
 ## Install the standalone app
 
-Run **FlashDesk-Player-Setup-1.0.8.exe** from the deliverables folder. The installed app runs without Node.js.
+Run **FlashDesk-Player-Setup-1.0.9.exe** from the deliverables folder. The installed app runs without Node.js.
 
 ## Run from source
 
