@@ -2,12 +2,41 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 const { autoUpdater } = require('electron-updater');
+const { GIFEncoder, quantize, applyPalette } = require('gifenc');
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
 
 function hasUpdateFeed() {
   return app.isPackaged && fs.existsSync(path.join(process.resourcesPath, 'app-update.yml'));
+}
+
+function encodeGameGif(frames, width, height, delay = 170) {
+  if (!Array.isArray(frames) || frames.length < 2 || width < 1 || height < 1) {
+    throw new Error('There are not enough game frames to make a GIF.');
+  }
+  const paletteBytes = new Uint8Array(Math.ceil((width * height) / 4) * frames.length * 4);
+  let paletteOffset = 0;
+  const rgbaFrames = frames.map((frame) => frame instanceof Uint8Array ? frame : new Uint8Array(frame));
+  for (const frame of rgbaFrames) {
+    if (frame.length !== width * height * 4) throw new Error('A captured game frame has an invalid size.');
+    for (let offset = 0; offset < frame.length; offset += 16) {
+      paletteBytes.set(frame.subarray(offset, offset + 4), paletteOffset);
+      paletteOffset += 4;
+    }
+  }
+  const palette = quantize(paletteBytes.subarray(0, paletteOffset), 128, { format: 'rgb565' });
+  const gif = GIFEncoder();
+  rgbaFrames.forEach((frame, index) => {
+    const indexed = applyPalette(frame, palette);
+    gif.writeFrame(indexed, width, height, {
+      palette: index === 0 ? palette : null,
+      delay,
+      repeat: index === 0 ? 0 : undefined
+    });
+  });
+  gif.finish();
+  return gif.bytes();
 }
 
 function sendUpdateState(state, details = {}) {
@@ -65,6 +94,7 @@ function createWindow() {
   ipcMain.removeHandler('updater:download');
   ipcMain.removeHandler('updater:install');
   ipcMain.removeHandler('player:capture-frame');
+  ipcMain.removeHandler('player:encode-gif');
   ipcMain.handle('window:minimize', () => win.minimize());
   ipcMain.handle('window:toggle-maximize', () => {
     if (win.isMaximized()) win.unmaximize();
@@ -111,6 +141,8 @@ function createWindow() {
     if (croppedImage.isEmpty()) throw new Error('The game screen could not be cropped.');
     return croppedImage.toPNG();
   });
+  ipcMain.handle('player:encode-gif', (_event, frames, width, height, delay) =>
+    encodeGameGif(frames, width, height, delay));
   ipcMain.handle('updater:get-status', () => ({
     state: app.isPackaged ? (hasUpdateFeed() ? 'idle' : 'unconfigured') : 'unavailable',
     currentVersion: app.getVersion(),

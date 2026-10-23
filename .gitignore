@@ -1,4 +1,7 @@
 node_modules/
 release/
 dist/
+.electron-cache/
+.electron-builder-cache/
+.temp-build/
 *.log

@@ -1018,11 +1018,14 @@ function bindEvents() {
   $('about-ruffle').addEventListener('click', () => showToast('FlashDesk uses Ruffle, an open-source Flash Player emulator.'));
   elements.updateButton.addEventListener('click', async () => {
     try {
+      if (!window.appWindow?.checkForUpdates) {
+        throw new Error('Update controls did not load. Restart FlashDesk, then install the latest setup if this keeps happening.');
+      }
       if (updatePhase === 'available') await window.appWindow.downloadUpdate();
       else if (updatePhase === 'downloaded') await window.appWindow.installUpdate();
       else renderUpdateState(await window.appWindow.checkForUpdates());
-    } catch {
-      renderUpdateState({ state: 'error', message: 'Could not start the update action.' });
+    } catch (error) {
+      renderUpdateState({ state: 'error', message: error?.message || 'Could not start the update action.' });
     }
   });
   $('minimize-btn').addEventListener('click', () => window.appWindow?.minimize());
@@ -1076,7 +1079,13 @@ refreshLibrary();
 refreshRecentGame();
 window.appWindow?.onFullscreenChange(syncFullscreenUI);
 window.appWindow?.onUpdateState(renderUpdateState);
-window.appWindow?.getUpdateStatus().then(renderUpdateState).catch(() => renderUpdateState({ state: 'error' }));
+if (window.appWindow?.getUpdateStatus) {
+  window.appWindow.getUpdateStatus()
+    .then(renderUpdateState)
+    .catch((error) => renderUpdateState({ state: 'error', message: error?.message || 'Could not load update status.' }));
+} else {
+  renderUpdateState({ state: 'error', message: 'FlashDesk controls did not load. Restart the app, then install the latest setup if this keeps happening.' });
+}
 document.addEventListener('fullscreenchange', () => syncFullscreenUI(!!document.fullscreenElement));
 window.addEventListener('resize', schedulePlayerViewportSync, { passive: true });
 new ResizeObserver(schedulePlayerViewportSync).observe(elements.playerMount);
