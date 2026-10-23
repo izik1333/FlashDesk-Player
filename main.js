@@ -34,30 +34,40 @@ function avm1PushInteger(value) {
   return avm1Record(0x96, payload);
 }
 
-function avm1DefineFunction2(parameterNames, body) {
+function avm1GetVariable(name) {
+  return Buffer.concat([avm1PushString(name), avm1Record(0x1c)]);
+}
+
+function avm1DefineFunction2(functionName, parameterNames, body) {
   const parameters = parameterNames.flatMap((name) => [Buffer.from([0]), Buffer.from(`${name}\0`, 'utf8')]);
   const header = Buffer.concat([
-    Buffer.from([0]), u16(parameterNames.length), Buffer.from([0]), u16(0),
+    Buffer.from(`${functionName}\0`, 'utf8'), u16(parameterNames.length), Buffer.from([0]), u16(0),
     ...parameters, u16(body.length)
   ]);
   return Buffer.concat([Buffer.from([0x8e]), u16(header.length), header, body]);
 }
 
 function avm1ExternalCallback(name, parameters, body) {
+  const functionName = `${name}Handler`;
   return Buffer.concat([
-    avm1DefineFunction2(parameters, body),
-    avm1PushString('_root'), avm1Record(0x1c),
-    avm1PushString(name), avm1PushString('addCallback'),
-    avm1PushString('flash.external.ExternalInterface'), avm1Record(0x1c),
-    avm1PushInteger(3), avm1Record(0x52), avm1Record(0x17)
+    avm1DefineFunction2(functionName, parameters, body),
+    avm1GetVariable('flash.external.ExternalInterface'),
+    avm1PushString('addCallback'),
+    avm1PushString(name),
+    avm1GetVariable('_root'),
+    avm1GetVariable(functionName),
+    avm1PushInteger(3),
+    avm1Record(0x52), avm1Record(0x17)
   ]);
 }
 
 function makeSceneBridgeActions() {
   const sceneCall = Buffer.concat([
-    avm1PushString('sceneName'), avm1Record(0x1c),
-    avm1PushString('gotoScreen'), avm1PushString('_root'), avm1Record(0x1c),
-    avm1PushInteger(1), avm1Record(0x52), avm1Record(0x17),
+    avm1GetVariable('_root'),
+    avm1PushString('gotoScreen'),
+    avm1GetVariable('sceneName'),
+    avm1PushInteger(1),
+    avm1Record(0x52), avm1Record(0x17),
     avm1Record(0x96, Buffer.from([5, 1])), avm1Record(0x3e), Buffer.from([0])
   ]);
   const ready = Buffer.concat([
@@ -68,7 +78,7 @@ function makeSceneBridgeActions() {
     avm1ExternalCallback('flashdeskSceneControlsReady', [], ready)
   ]);
   const checkInterface = Buffer.concat([
-    avm1PushString('flash.external.ExternalInterface'), avm1Record(0x1c), avm1Record(0x44),
+    avm1GetVariable('flash.external.ExternalInterface'), avm1Record(0x44),
     avm1PushString('undefined'), avm1Record(0x49)
   ]);
   const jump = Buffer.concat([Buffer.from([0x9d]), u16(2), u16(callbacks.length)]);
