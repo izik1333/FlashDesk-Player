@@ -64,7 +64,8 @@
               <button class="icon-btn screenshot-current-btn" id="screenshot-current-btn" aria-label="Use a screenshot of the game as its cover" title="Use game screenshot as cover" disabled><svg viewBox="0 0 20 20"><path d="M3 6.5h3l1.4-2h5.2l1.4 2h3v9H3z"/><circle cx="10" cy="11" r="3"/></svg></button>
               <button class="icon-btn gif-cover-btn" id="gif-cover-btn" aria-label="Record a four-second game GIF as its cover" title="Record 4-second game GIF as cover" disabled>GIF</button>
               <button class="icon-btn gif-crop-btn" id="gif-crop-btn" type="button" title="Choose the on-screen area to record as a GIF">Area</button>
-              <select class="gif-size-select" id="gif-size-select" aria-label="GIF maximum edge size" title="Maximum width or height of the saved GIF"><option value="128">GIF max 128</option><option value="256" selected>GIF max 256</option><option value="384">GIF max 384</option></select>
+              <select class="gif-size-select" id="gif-size-select" aria-label="GIF maximum edge size" title="Maximum width or height of the saved GIF; 1920 gives 1080p on a 16:9 game"><option value="128">GIF max 128</option><option value="256">GIF max 256</option><option value="384">GIF max 384</option><option value="720">GIF max 720</option><option value="1080">GIF max 1080</option><option value="1920" selected>GIF 1080p</option></select>
+              <select class="gif-frame-rate-select" id="gif-frame-rate-select" aria-label="GIF frame rate" title="Frame rate for the saved GIF"><option value="12">12 fps</option><option value="15">15 fps</option><option value="24" selected>24 fps</option></select>
               <select class="scene-select" data-scene-select hidden aria-label="Choose a game scene">
                 <option value="">Scenes</option>
                 <option value="screen6">Scene 1</option><option value="screen7">Scene 2</option><option value="screen8">Scene 3</option><option value="screen9">Scene 4</option><option value="screen10">Scene 5</option>
@@ -242,7 +243,7 @@
       <div class="favorites-list" id="favorites-list" aria-live="polite"></div>
     </section>
 
-    <footer class="app-footer"><span>FLASHDESK PLAYER <span class="footer-dot">•</span> 1.0.13</span><span class="footer-shortcuts"><kbd>SPACE</kbd> play / pause <span class="footer-gap"></span><kbd>M</kbd> mute</span></footer>
+    <footer class="app-footer"><span>FLASHDESK PLAYER <span class="footer-dot">•</span> 1.0.14</span><span class="footer-shortcuts"><kbd>SPACE</kbd> play / pause <span class="footer-gap"></span><kbd>M</kbd> mute</span></footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

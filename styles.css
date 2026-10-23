@@ -118,9 +118,9 @@ button { color: inherit; }
 .cover-current-btn { color: #8994a5; }
 .screenshot-current-btn { color: #8994a5; }
 .gif-cover-btn { flex: 0 0 28px; color: #8994a5; font-size: 7px; font-weight: 800; letter-spacing: .2px; }
-.gif-crop-btn, .gif-size-select { height: 27px; padding: 0 7px; border: 1px solid #333a4a; border-radius: 6px; background: #151a24; color: #aeb5c5; font-size: 9px; }
+.gif-crop-btn, .gif-size-select, .gif-frame-rate-select { height: 27px; padding: 0 7px; border: 1px solid #333a4a; border-radius: 6px; background: #151a24; color: #aeb5c5; font-size: 9px; }
 .gif-crop-btn { cursor: pointer; }
-.gif-crop-btn:hover, .gif-size-select:hover { border-color: #5a527f; color: #d9d5ff; }
+.gif-crop-btn:hover, .gif-size-select:hover, .gif-frame-rate-select:hover { border-color: #5a527f; color: #d9d5ff; }
 .scene-select { width: 100px; height: 27px; margin: 0 3px; padding: 0 7px; border: 1px solid #333a4a; border-radius: 6px; background: #151a24; color: #aeb5c5; font-size: 9px; cursor: pointer; }
 .scene-select:hover { border-color: #5a527f; color: #d9d5ff; }
 .scene-select:focus-visible { outline: 2px solid #aa9cff; outline-offset: 2px; }

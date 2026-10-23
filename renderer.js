@@ -47,7 +47,7 @@ const elements = {
   sceneSelects: Array.from(document.querySelectorAll('[data-scene-select]')),
   libraryCurrentButton: $('library-current-btn'), coverCurrentButton: $('cover-current-btn'),
   screenshotCurrentButton: $('screenshot-current-btn'), gifCoverButton: $('gif-cover-btn'),
-  gifCropButton: $('gif-crop-btn'), gifSizeSelect: $('gif-size-select'),
+  gifCropButton: $('gif-crop-btn'), gifSizeSelect: $('gif-size-select'), gifFrameRateSelect: $('gif-frame-rate-select'),
   fullscreenScreenshotButton: $('fullscreen-screenshot-btn'), fullscreenGifButton: $('fullscreen-gif-btn'), fullscreenGifCropButton: $('fullscreen-gif-crop-btn'), coverPicker: $('cover-picker'),
   dropZone: $('drop-zone'), dropHint: $('drop-hint'), emptyState: $('empty-state'), playerMount: $('player-mount'), stageOverlay: $('stage-overlay'),
   fileName: $('file-name'), fileDetails: $('file-details'), movieState: $('movie-state'),
@@ -683,17 +683,17 @@ function selectGifCropArea() {
 }
 
 async function captureGameGifCover() {
-  if (!currentPlayer || !window.appWindow?.encodeGameGif) {
+  if (!currentPlayer || !window.appWindow?.startGameGif) {
     showToast('Game GIF capture is unavailable. Restart FlashDesk and try again.');
     return;
   }
   const edge = Number(elements.gifSizeSelect.value) || 256;
-  const frameRate = 15;
+  const frameRate = Number(elements.gifFrameRateSelect.value) || 24;
   const durationMs = 4000;
   const frameCount = Math.ceil(durationMs / 1000 * frameRate);
   const frameInterval = 1000 / frameRate;
-  const frames = [];
   const canvas = document.createElement('canvas');
+  let encoderStarted = false;
   gifRecording = true;
   elements.gifCoverButton.disabled = true;
   elements.gifCoverButton.textContent = 'REC';
@@ -722,15 +722,21 @@ async function captureGameGifCover() {
       const context = canvas.getContext('2d', { willReadFrequently: true });
       if (!context) throw new Error('Could not prepare a GIF cover.');
       context.drawImage(bitmap, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, outputWidth, outputHeight);
-      frames.push(context.getImageData(0, 0, outputWidth, outputHeight).data);
+      if (index === 0) {
+        await window.appWindow.startGameGif(outputWidth, outputHeight, Math.round(frameInterval));
+        encoderStarted = true;
+      }
+      await window.appWindow.appendGameGifFrame(context.getImageData(0, 0, outputWidth, outputHeight).data);
       bitmap.close();
     }
-    const gifBytes = await window.appWindow.encodeGameGif(frames, canvas.width, canvas.height, Math.round(frameInterval));
+    const gifBytes = await window.appWindow.finishGameGif();
+    encoderStarted = false;
     const saveResult = await window.appWindow.saveGameGif(gifBytes, `${currentFileName.replace(/\.swf$/i, '')}-cover.gif`);
     await storeCurrentCover(new Blob([gifBytes], { type: 'image/gif' }), saveResult?.filePath
       ? `GIF saved to ${saveResult.filePath} and added as the library cover.`
       : 'GIF added as the library cover; file export canceled.');
   } catch (error) {
+    if (encoderStarted) await window.appWindow.cancelGameGif().catch(() => {});
     showToast(error?.message || 'Could not record an animated game cover.');
   } finally {
     gifRecording = false;

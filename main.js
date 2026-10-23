@@ -5,6 +5,8 @@ const zlib = require('node:zlib');
 const { autoUpdater } = require('electron-updater');
 const { GIFEncoder, quantize, applyPalette } = require('gifenc');
 
+let activeGifEncoder = null;
+
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
@@ -159,32 +161,42 @@ function prepareGameSceneControls(inputData) {
   };
 }
 
-function encodeGameGif(frames, width, height, delay = 170) {
-  if (!Array.isArray(frames) || frames.length < 2 || width < 1 || height < 1) {
-    throw new Error('There are not enough game frames to make a GIF.');
+function startGameGif(width, height, delay = 170) {
+  if (activeGifEncoder) throw new Error('A GIF recording is already being encoded.');
+  if (width < 1 || height < 1) throw new Error('The GIF dimensions are invalid.');
+  activeGifEncoder = { encoder: GIFEncoder(), width, height, delay, frameCount: 0 };
+}
+
+function appendGameGifFrame(frameData) {
+  const session = activeGifEncoder;
+  if (!session) throw new Error('The GIF recording was not started.');
+  const frame = frameData instanceof Uint8Array ? frameData : new Uint8Array(frameData);
+  if (frame.length !== session.width * session.height * 4) throw new Error('A captured game frame has an invalid size.');
+  // Sample each frame for its own palette, then encode it immediately. This
+  // keeps 1080p/24 fps recordings from retaining ~800 MB of raw pixels while
+  // preserving changing game colors throughout the clip.
+  const samples = new Uint8Array(Math.ceil((session.width * session.height) / 4) * 4);
+  let sampleOffset = 0;
+  for (let offset = 0; offset < frame.length; offset += 16) {
+    samples.set(frame.subarray(offset, offset + 4), sampleOffset);
+    sampleOffset += 4;
   }
-  const paletteBytes = new Uint8Array(Math.ceil((width * height) / 4) * frames.length * 4);
-  let paletteOffset = 0;
-  const rgbaFrames = frames.map((frame) => frame instanceof Uint8Array ? frame : new Uint8Array(frame));
-  for (const frame of rgbaFrames) {
-    if (frame.length !== width * height * 4) throw new Error('A captured game frame has an invalid size.');
-    for (let offset = 0; offset < frame.length; offset += 16) {
-      paletteBytes.set(frame.subarray(offset, offset + 4), paletteOffset);
-      paletteOffset += 4;
-    }
-  }
-  const palette = quantize(paletteBytes.subarray(0, paletteOffset), 256, { format: 'rgb565' });
-  const gif = GIFEncoder();
-  rgbaFrames.forEach((frame, index) => {
-    const indexed = applyPalette(frame, palette);
-    gif.writeFrame(indexed, width, height, {
-      palette: index === 0 ? palette : null,
-      delay,
-      repeat: index === 0 ? 0 : undefined
-    });
+  const palette = quantize(samples.subarray(0, sampleOffset), 256, { format: 'rgb565' });
+  const indexed = applyPalette(frame, palette);
+  session.encoder.writeFrame(indexed, session.width, session.height, {
+    palette,
+    delay: session.delay,
+    repeat: session.frameCount === 0 ? 0 : undefined
   });
-  gif.finish();
-  return gif.bytes();
+  session.frameCount += 1;
+}
+
+function finishGameGif() {
+  const session = activeGifEncoder;
+  activeGifEncoder = null;
+  if (!session || session.frameCount < 2) throw new Error('There are not enough game frames to make a GIF.');
+  session.encoder.finish();
+  return session.encoder.bytes();
 }
 
 function sendUpdateState(state, details = {}) {
@@ -291,8 +303,10 @@ function createWindow() {
     if (croppedImage.isEmpty()) throw new Error('The game screen could not be cropped.');
     return croppedImage.toPNG();
   });
-  ipcMain.handle('player:encode-gif', (_event, frames, width, height, delay) =>
-    encodeGameGif(frames, width, height, delay));
+  ipcMain.handle('player:start-gif', (_event, width, height, delay) => startGameGif(width, height, delay));
+  ipcMain.handle('player:gif-frame', (_event, frame) => appendGameGifFrame(frame));
+  ipcMain.handle('player:finish-gif', () => finishGameGif());
+  ipcMain.handle('player:cancel-gif', () => { activeGifEncoder = null; });
   ipcMain.handle('player:save-gif', async (event, bytes, suggestedName) => {
     if (!event.senderFrame?.url?.startsWith('file://')) {
       throw new Error('GIF files can only be saved from the FlashDesk window.');
