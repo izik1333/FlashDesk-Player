@@ -215,15 +215,23 @@
       </header>
       <div class="library-toolbar">
         <div class="library-summary" id="library-summary">0 games</div>
-        <div class="library-filters" role="tablist" aria-label="Library filter">
-          <button class="library-filter active" type="button" data-filter="all" role="tab" aria-selected="true">All games</button>
-          <button class="library-filter" type="button" data-filter="favorites" role="tab" aria-selected="false">Favorites</button>
+        <div class="library-toolbar-controls">
+          <div class="library-filters" role="tablist" aria-label="Library filter">
+            <button class="library-filter active" type="button" data-filter="all" role="tab" aria-selected="true">All games</button>
+            <button class="library-filter" type="button" data-filter="favorites" role="tab" aria-selected="false">Favorites</button>
+          </div>
+          <div class="library-layouts" role="group" aria-label="Library layout">
+            <button class="library-layout-button" type="button" data-library-view="large" aria-label="Large thumbnails" title="Large thumbnails" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="2.5" width="15" height="15" rx="1.5"/><path d="M3 13l4-4 3 3 2-2 5 5"/></svg></button>
+            <button class="library-layout-button active" type="button" data-library-view="normal" aria-label="Normal thumbnails" title="Normal thumbnails" aria-pressed="true"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="7" height="7" rx="1"/><rect x="11" y="2" width="7" height="7" rx="1"/><rect x="2" y="11" width="7" height="7" rx="1"/><rect x="11" y="11" width="7" height="7" rx="1"/></svg></button>
+            <button class="library-layout-button" type="button" data-library-view="columns" aria-label="Column layout" title="Column layout" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3" width="15" height="5" rx="1"/><rect x="2.5" y="12" width="15" height="5" rx="1"/></svg></button>
+            <button class="library-layout-button" type="button" data-library-view="list" aria-label="List layout" title="List layout" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 4h9M7.5 10h9M7.5 16h9"/><circle cx="3.5" cy="4" r=".8"/><circle cx="3.5" cy="10" r=".8"/><circle cx="3.5" cy="16" r=".8"/></svg></button>
+          </div>
         </div>
       </div>
       <div class="favorites-list" id="favorites-list" aria-live="polite"></div>
     </section>
 
-    <footer class="app-footer"><span>FLASHDESK PLAYER <span class="footer-dot">•</span> 1.0.5</span><span class="footer-shortcuts"><kbd>SPACE</kbd> play / pause <span class="footer-gap"></span><kbd>M</kbd> mute</span></footer>
+    <footer class="app-footer"><span>FLASHDESK PLAYER <span class="footer-dot">•</span> 1.0.7</span><span class="footer-shortcuts"><kbd>SPACE</kbd> play / pause <span class="footer-gap"></span><kbd>M</kbd> mute</span></footer>
   </div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

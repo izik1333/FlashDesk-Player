@@ -1,4 +1,5 @@
 const SETTINGS_KEY = 'flashdesk-settings-v1';
+const LIBRARY_VIEW_KEY = 'flashdesk-library-view-v1';
 const FAVORITES_DB_NAME = 'flashdesk-favorites-v1';
 const FAVORITES_STORE_NAME = 'games';
 const RECENT_STORE_NAME = 'recent';
@@ -14,6 +15,7 @@ let currentFileName = '';
 let currentLibraryId = null;
 let libraryRecords = [];
 let libraryFilter = 'all';
+let libraryViewMode = readLibraryViewMode();
 let libraryCoverUrls = [];
 let favoritesDbPromise = null;
 let recentGame = null;
@@ -25,6 +27,15 @@ let viewportSyncFrame = 0;
 let lastAudibleVolume = defaults.volume;
 
 const $ = (id) => document.getElementById(id);
+function readLibraryViewMode() {
+  try {
+    const saved = localStorage.getItem(LIBRARY_VIEW_KEY);
+    return ['large', 'normal', 'columns', 'list'].includes(saved) ? saved : 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
 const elements = {
   playerTab: $('player-tab'), libraryTab: $('library-tab'), playerView: $('player-view'), libraryView: $('library-view'),
   libraryAddButton: $('library-add-game-btn'), librarySummary: $('library-summary'),
@@ -346,6 +357,8 @@ function syncLibraryButtons() {
 }
 
 function renderLibrary() {
+  elements.favoritesList.dataset.view = libraryViewMode;
+  syncLibraryViewButtons();
   libraryCoverUrls.forEach((url) => URL.revokeObjectURL(url));
   libraryCoverUrls = [];
   elements.favoritesCount.textContent = String(libraryRecords.length);
@@ -430,6 +443,14 @@ function syncLibraryFilterButtons() {
     const active = button.dataset.filter === libraryFilter;
     button.classList.toggle('active', active);
     button.setAttribute('aria-selected', String(active));
+  });
+}
+
+function syncLibraryViewButtons() {
+  document.querySelectorAll('.library-layout-button').forEach((button) => {
+    const active = button.dataset.libraryView === libraryViewMode;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
   });
 }
 
@@ -592,10 +613,11 @@ async function captureGameGifCover() {
     showToast('Game GIF capture is unavailable. Restart FlashDesk and try again.');
     return;
   }
-  const edge = 160;
-  const frameCount = 20;
+  const edge = 256;
+  const frameRate = 15;
   const durationMs = 4000;
-  const frameInterval = durationMs / frameCount;
+  const frameCount = Math.ceil(durationMs / 1000 * frameRate);
+  const frameInterval = 1000 / frameRate;
   const frames = [];
   const canvas = document.createElement('canvas');
   canvas.width = edge;
@@ -628,7 +650,7 @@ async function captureGameGifCover() {
       frames.push(context.getImageData(0, 0, edge, edge).data);
       bitmap.close();
     }
-    const gifBytes = await window.appWindow.encodeGameGif(frames, edge, edge, 200);
+    const gifBytes = await window.appWindow.encodeGameGif(frames, edge, edge, Math.round(frameInterval));
     await storeCurrentCover(new Blob([gifBytes], { type: 'image/gif' }), 'Animated game GIF cover saved.');
   } catch (error) {
     showToast(error?.message || 'Could not record an animated game cover.');
@@ -949,6 +971,14 @@ function bindEvents() {
   document.querySelectorAll('.library-filter').forEach((button) => button.addEventListener('click', () => {
     libraryFilter = button.dataset.filter;
     syncLibraryFilterButtons();
+    renderLibrary();
+  }));
+  document.querySelectorAll('.library-layout-button').forEach((button) => button.addEventListener('click', () => {
+    const view = button.dataset.libraryView;
+    if (!['large', 'normal', 'columns', 'list'].includes(view)) return;
+    libraryViewMode = view;
+    try { localStorage.setItem(LIBRARY_VIEW_KEY, view); } catch { /* Keep the selected layout for this session. */ }
+    syncLibraryViewButtons();
     renderLibrary();
   }));
   elements.favoritesList.addEventListener('click', async (event) => {

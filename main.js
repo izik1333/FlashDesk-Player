@@ -25,7 +25,7 @@ function encodeGameGif(frames, width, height, delay = 170) {
       paletteOffset += 4;
     }
   }
-  const palette = quantize(paletteBytes.subarray(0, paletteOffset), 128, { format: 'rgb565' });
+  const palette = quantize(paletteBytes.subarray(0, paletteOffset), 256, { format: 'rgb565' });
   const gif = GIFEncoder();
   rgbaFrames.forEach((frame, index) => {
     const indexed = applyPalette(frame, palette);
