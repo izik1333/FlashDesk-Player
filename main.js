@@ -69,7 +69,8 @@ function avm1ExternalCallback(name, parameters, body) {
 
 function makeSceneBridgeActions() {
   const sceneCall = Buffer.concat([
-    avm1CallMethod('_root', 'gotoScreen', [avm1GetVariable('sceneName'), avm1PushInteger(1)]),
+    // The game's own scene buttons call gotoScreen with the target as its only argument.
+    avm1CallMethod('_root', 'gotoScreen', [avm1GetVariable('sceneName')]),
     avm1Record(0x96, Buffer.from([5, 1])), avm1Record(0x3e), Buffer.from([0])
   ]);
   const ready = Buffer.concat([
